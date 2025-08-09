@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
   "name": "Video Full Tab",
-  "version": "1.2.0",
-  "description": "Fill the tab with the video (safer YouTube handling) and fallback to iframes.",
+  "version": "1.7.0",
+  "description": "Pixel-perfect sizing (no object-fit). Computes contain/cover via JS; tracks node swaps; super stable on Twitch/YouTube.",
   "permissions": [
     "activeTab",
     "<all_urls>"
