@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Video Full Tab",
-  "version": "1.1.0",
-  "description": "Fill the tab with the video or player container (handles iframes; better YouTube support).",
+  "version": "1.2.0",
+  "description": "Fill the tab with the video (safer YouTube handling) and fallback to iframes.",
   "permissions": [
     "scripting",
     "activeTab"

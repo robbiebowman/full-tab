@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
   "name": "Video Full Tab",
-  "version": "1.0.1",
-  "description": "Toggle a video (or the largest iframe) to fill the tab. Handles iframes.",
+  "version": "1.2.0",
+  "description": "Fill the tab with the video (safer YouTube handling) and fallback to iframes.",
   "permissions": [
     "activeTab",
     "<all_urls>"

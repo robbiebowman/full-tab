@@ -42,35 +42,6 @@ function toggleFullTab() {
     return best;
   };
 
-  const findBestPlayerTarget = () => {
-    // Site-specific player containers we prefer over <video>
-    const selectors = [
-      // YouTube player container (watch page & embeds)
-      "#movie_player",
-      ".html5-video-player",
-      // Vimeo
-      ".player",
-      // Dailymotion
-      ".dmp_Player",
-      // Twitch
-      ".video-player__container",
-      // Generic: video parent with controls overlays
-      "video[controls]::-webkit-media-controls-enclosure", // unlikely, but keep list extensible
-    ].filter(Boolean);
-
-    for (const sel of selectors) {
-      const nodes = Array.from(DOC.querySelectorAll(sel));
-      const best = largestByArea(nodes);
-      if (best) return best;
-    }
-    // Fallback: largest visible <video>
-    const vids = Array.from(DOC.querySelectorAll("video"));
-    const bestVideo = largestByArea(vids);
-    if (bestVideo) return bestVideo;
-
-    return null;
-  };
-
   const deactivate = () => {
     const style = DOC.getElementById(STYLE_ID);
     if (style) style.remove();
@@ -78,17 +49,19 @@ function toggleFullTab() {
     DOC.querySelectorAll("[data-vft-target],[data-vft-iframe]").forEach(el => {
       el.removeAttribute("data-vft-target");
       el.removeAttribute("data-vft-iframe");
+      el.style.removeProperty('transform');
     });
   };
 
   const activate = () => {
-    // Per-frame: pick best player target
-    const bestPlayer = findBestPlayerTarget();
-    if (bestPlayer) {
-      bestPlayer.setAttribute("data-vft-target", "1");
+    // Prefer the largest visible <video> in this frame
+    const vids = Array.from(DOC.querySelectorAll("video"));
+    const bestVideo = largestByArea(vids);
+    if (bestVideo) {
+      bestVideo.setAttribute("data-vft-target", "1");
     }
 
-    // In top frame, if no player chosen, expand the largest iframe
+    // In top frame, if we didn't find a video, expand the largest iframe
     if (window.top === window) {
       const hasTarget = !!DOC.querySelector('[data-vft-target="1"]');
       if (!hasTarget) {
@@ -106,6 +79,7 @@ function toggleFullTab() {
           overflow: hidden !important;
           background: black !important;
         }
+        /* Targeted video or iframe fills viewport */
         [data-vft-target="1"], [data-vft-iframe="1"] {
           position: fixed !important;
           top: 0 !important;
@@ -115,37 +89,36 @@ function toggleFullTab() {
           z-index: 2147483647 !important;
           background: black !important;
         }
-        /* Ensure <video> adapts when we're targeting a container (e.g., YouTube player) */
-        [data-vft-target="1"] video {
-          width: 100% !important;
-          height: 100% !important;
+        [data-vft-target="1"] {
           object-fit: contain !important;
-          max-width: 100% !important;
-          max-height: 100% !important;
-        }
-        /* Disable pointer-events site-wide so overlays don't steal clicks,
-           but keep them working inside our target (controls, captions). */
-        * { pointer-events: none !important; }
-        [data-vft-target="1"], [data-vft-iframe="1"],
-        [data-vft-target="1"] *,
-        [data-vft-iframe="1"] * {
-          pointer-events: auto !important;
+          max-width: 100vw !important;
+          max-height: 100vh !important;
         }
 
-        /* YouTube-specific: hide chrome that might float above */
+        /* YouTube-specific: hide surrounding chrome while active */
         html.${FLAG_CLASS} ytd-app #masthead-container,
         html.${FLAG_CLASS} ytd-app #guide,
         html.${FLAG_CLASS} ytd-watch-flexy #secondary,
         html.${FLAG_CLASS} ytd-watch-flexy #below,
-        html.${FLAG_CLASS} ytd-watch-flexy ytd-merch-shelf-renderer,
         html.${FLAG_CLASS} tp-yt-app-drawer,
         html.${FLAG_CLASS} ytd-popup-container {
           display: none !important;
+        }
+        /* Ensure YouTube's own video container doesn't fight sizing */
+        html.${FLAG_CLASS} .html5-video-container,
+        html.${FLAG_CLASS} .html5-video-player {
+          width: 100% !important;
+          height: 100% !important;
         }
       `;
       DOC.head.appendChild(style);
     }
     ROOT.classList.add(FLAG_CLASS);
+
+    // Nudge layout engines that depend on resize
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 50);
   };
 
   const isActive = ROOT.classList.contains(FLAG_CLASS);
