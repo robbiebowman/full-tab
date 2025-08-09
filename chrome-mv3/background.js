@@ -1,55 +1,19 @@
-const MODE_KEY = "vft_mode"; // "contain" or "cover"
 
-async function getMode() {
-  const result = await chrome.storage.local.get(MODE_KEY);
-  return (result && result[MODE_KEY] === "cover") ? "cover" : "contain";
-}
 
-async function setMode(mode) { 
-  const obj = {}; 
-  obj[MODE_KEY] = mode;
-  await chrome.storage.local.set(obj); 
-}
-
-chrome.runtime.onInstalled.addListener(async () => {
-  chrome.contextMenus.create({
-    id: "toggle-fit",
-    title: "Toggle Fit (Contain/Cover)",
-    contexts: ["action"]
-  });
-});
-
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  if (info.menuItemId !== "toggle-fit" || !tab || !tab.id) return;
-  const current = await getMode();
-  const next = current === "contain" ? "cover" : "contain";
-  await setMode(next);
-  try {
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id, allFrames: false },
-      func: (next) => { if (window.__VFT_API__) window.__VFT_API__.setMode(next); },
-      args: [next]
-    });
-  } catch (e) {
-    console.warn("Failed to set mode via page API:", e);
-  }
-});
 
 chrome.action.onClicked.addListener(async (tab) => {
   if (!tab || !tab.id) return;
-  const mode = await getMode();
   try {
     await chrome.scripting.executeScript({
       target: { tabId: tab.id, allFrames: true },
-      func: toggleFullTab,
-      args: [mode]
+      func: toggleFullTab
     });
   } catch (e) {
     console.error("Video Full Tab injection failed:", e);
   }
 });
 
-function toggleFullTab(preferredMode) {
+function toggleFullTab() {
   if (window.top !== window) return;
 
   const w = window;
@@ -61,7 +25,6 @@ function toggleFullTab(preferredMode) {
       w[stateKey] = {
         active: false,
         moved: [],
-        mode: preferredMode || "contain",
         observer: null,
         innerObserver: null,
         activeEl: null,
@@ -73,12 +36,6 @@ function toggleFullTab(preferredMode) {
     return w[stateKey];
   };
 
-  w.__VFT_API__ = {
-    setMode: (m) => { const st = getState(); st.mode = (m === "cover" ? "cover" : "contain"); scheduleLayout(); },
-    getMode: () => getState().mode,
-    isActive: () => getState().active,
-    toggle: () => { const st = getState(); if (!st.active) activate(); else deactivate(); }
-  };
 
   const isVisible = (el) => {
     if (!el) return false;
@@ -163,7 +120,7 @@ function toggleFullTab(preferredMode) {
     const mh = intrinsic.h;
     if (!mw || !mh || !vw || !vh) return;
     const sx = vw / mw, sy = vh / mh;
-    const scale = st.mode === "cover" ? Math.max(sx, sy) : Math.min(sx, sy);
+    const scale = Math.min(sx, sy);
     const targetW = Math.round(mw * scale);
     const targetH = Math.round(mh * scale);
     st.activeEl.style.width = targetW + "px";

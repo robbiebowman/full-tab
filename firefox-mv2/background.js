@@ -1,72 +1,30 @@
-
-const MODE_KEY = "vft_mode";
-
-function getMode() {
-  return new Promise((resolve) => {
-    chrome.storage.local.get(MODE_KEY, (res) => {
-      const m = (res && res[MODE_KEY] === "cover") ? "cover" : "contain";
-      resolve(m);
-    });
-  });
-}
-function setMode(mode) {
-  return new Promise((resolve) => {
-    const obj = {}; obj[MODE_KEY] = mode;
-    chrome.storage.local.set(obj, resolve);
-  });
-}
-
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: "toggle-fit",
-    title: "Toggle Fit (Contain/Cover)",
-    contexts: ["browser_action", "action"]
-  });
-});
-
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  if (info.menuItemId !== "toggle-fit" || !tab || !tab.id) return;
-  const current = await getMode();
-  const next = current === "contain" ? "cover" : "contain";
-  await setMode(next);
-  // Try to poke the page if overlay is active
-  chrome.tabs.executeScript(tab.id, {
-    code: `(function(){ if (window.__VFT_API__) window.__VFT_API__.setMode(${JSON.stringify(next)}); })();`
-  });
-});
-
 chrome.browserAction.onClicked.addListener(async (tab) => {
   if (!tab || !tab.id) return;
-  const mode = await getMode();
-  const code = `(${toggleFullTab.toString()})(${JSON.stringify(mode)});`;
+  const code = `(${toggleFullTab.toString()})();`;
   chrome.tabs.executeScript(tab.id, { code: code, allFrames: true });
 });
 
-function toggleFullTab(preferredMode) {
+function toggleFullTab() {
   if (window.top !== window) return;
 
   const w = window;
   const d = document;
   const stateKey = "__VFT_STATE__";
 
-  const getState = () => (w[stateKey] ||= {
-    active: false,
-    moved: [],
-    mode: preferredMode || "contain", // "contain" | "cover"
-    observer: null,
-    innerObserver: null,
-    activeEl: null,
-    rafId: null,
-    resizeHandler: null,
-    metaHandler: null
-  });
-
-  // Simple public API for background to poke
-  w.__VFT_API__ = {
-    setMode: (m) => { const st = getState(); st.mode = (m === "cover" ? "cover" : "contain"); scheduleLayout(); },
-    getMode: () => getState().mode,
-    isActive: () => getState().active,
-    toggle: () => { const st = getState(); if (!st.active) activate(); else deactivate(); }
+  const getState = () => {
+    if (!w[stateKey]) {
+      w[stateKey] = {
+        active: false,
+        moved: [],
+        observer: null,
+        innerObserver: null,
+        activeEl: null,
+        rafId: null,
+        resizeHandler: null,
+        metaHandler: null
+      };
+    }
+    return w[stateKey];
   };
 
   const isVisible = (el) => {
@@ -109,7 +67,11 @@ function toggleFullTab(preferredMode) {
       #vft-inner > .vft-media { position: absolute !important; left: 50% !important; top: 50% !important;
                                 transform: translate(-50%, -50%) !important; background: black !important; }
     `;
-    if (!style) { style = d.createElement("style"); style.id = "vft-style"; d.head.appendChild(style); }
+    if (!style) { 
+      style = d.createElement("style"); 
+      style.id = "vft-style"; 
+      d.head.appendChild(style); 
+    }
     style.textContent = css;
   };
 
@@ -122,7 +84,7 @@ function toggleFullTab(preferredMode) {
     const inner = d.createElement("div");
     inner.id = "vft-inner";
     overlay.appendChild(inner);
-    d.body && d.body.appendChild(overlay);
+    if (d.body) d.body.appendChild(overlay);
     return overlay;
   };
 
@@ -143,10 +105,12 @@ function toggleFullTab(preferredMode) {
     if (!inner || !st.activeEl) return;
     const vw = inner.clientWidth;
     const vh = inner.clientHeight;
-    const { w: mw, h: mh } = getIntrinsic(st.activeEl);
+    const intrinsic = getIntrinsic(st.activeEl);
+    const mw = intrinsic.w;
+    const mh = intrinsic.h;
     if (!mw || !mh || !vw || !vh) return;
     const sx = vw / mw, sy = vh / mh;
-    const scale = st.mode === "cover" ? Math.max(sx, sy) : Math.min(sx, sy);
+    const scale = Math.min(sx, sy);
     const targetW = Math.round(mw * scale);
     const targetH = Math.round(mh * scale);
     st.activeEl.style.width = targetW + "px";
@@ -181,8 +145,15 @@ function toggleFullTab(preferredMode) {
     inner.appendChild(found.el);
 
     st.activeEl = found.el;
-    if (found.type === "video") { try { found.el.controls = prevControls || false; } catch(e) {} }
-    if (found.type === "iframe") { found.el.setAttribute("allowfullscreen", "true"); found.el.style.border = "0"; }
+    if (found.type === "video") { 
+      try { 
+        found.el.controls = prevControls || false; 
+      } catch(e) {} 
+    }
+    if (found.type === "iframe") { 
+      found.el.setAttribute("allowfullscreen", "true"); 
+      found.el.style.border = "0"; 
+    }
 
     st.resizeHandler = () => scheduleLayout();
     w.addEventListener("resize", st.resizeHandler, { passive: true });
@@ -193,7 +164,11 @@ function toggleFullTab(preferredMode) {
       found.el.addEventListener("resize", st.metaHandler, { passive: true });
     }
 
-    if (st.innerObserver) { try { st.innerObserver.disconnect(); } catch(e) {} }
+    if (st.innerObserver) { 
+      try { 
+        st.innerObserver.disconnect(); 
+      } catch(e) {} 
+    }
     st.innerObserver = new MutationObserver(() => {
       const current = inner.querySelector("video, iframe");
       if (current && current !== st.activeEl) {
@@ -206,7 +181,7 @@ function toggleFullTab(preferredMode) {
 
     scheduleLayout();
 
-    st.moved.push({ node: found.el, placeholder, prevStyle, prevControls, type: found.type });
+    st.moved.push({ node: found.el, placeholder: placeholder, prevStyle: prevStyle, prevControls: prevControls, type: found.type });
     st.active = true;
   };
 
@@ -216,7 +191,10 @@ function toggleFullTab(preferredMode) {
     ensureStyle();
 
     const found = findBest();
-    if (found) { moveIntoOverlay(found); return; }
+    if (found) { 
+      moveIntoOverlay(found); 
+      return; 
+    }
 
     let timeoutId = null;
     const start = performance.now();
@@ -224,12 +202,24 @@ function toggleFullTab(preferredMode) {
       if (st.active) return;
       const f = findBest();
       if (f) {
-        if (st.observer) { st.observer.disconnect(); st.observer = null; }
-        if (timeoutId) { clearTimeout(timeoutId); timeoutId = null; }
+        if (st.observer) { 
+          st.observer.disconnect(); 
+          st.observer = null; 
+        }
+        if (timeoutId) { 
+          clearTimeout(timeoutId); 
+          timeoutId = null; 
+        }
         moveIntoOverlay(f);
       } else if (performance.now() - start > 5000) {
-        if (st.observer) { st.observer.disconnect(); st.observer = null; }
-        if (timeoutId) { clearTimeout(timeoutId); timeoutId = null; }
+        if (st.observer) { 
+          st.observer.disconnect(); 
+          st.observer = null; 
+        }
+        if (timeoutId) { 
+          clearTimeout(timeoutId); 
+          timeoutId = null; 
+        }
         if (!document.getElementById("vft-overlay")) {
           alert("Video Full Tab: no video found on this page.");
         }
@@ -245,22 +235,43 @@ function toggleFullTab(preferredMode) {
     const st = getState();
     if (!st.active) return;
 
-    if (st.observer) { st.observer.disconnect(); st.observer = null; }
-    if (st.innerObserver) { st.innerObserver.disconnect(); st.innerObserver = null; }
-    if (st.resizeHandler) { w.removeEventListener("resize", st.resizeHandler); st.resizeHandler = null; }
+    if (st.observer) { 
+      st.observer.disconnect(); 
+      st.observer = null; 
+    }
+    if (st.innerObserver) { 
+      st.innerObserver.disconnect(); 
+      st.innerObserver = null; 
+    }
+    if (st.resizeHandler) { 
+      w.removeEventListener("resize", st.resizeHandler); 
+      st.resizeHandler = null; 
+    }
     if (st.metaHandler && st.activeEl) {
-      try { st.activeEl.removeEventListener("loadedmetadata", st.metaHandler); } catch(e) {}
-      try { st.activeEl.removeEventListener("resize", st.metaHandler); } catch(e) {}
+      try { 
+        st.activeEl.removeEventListener("loadedmetadata", st.metaHandler); 
+      } catch(e) {}
+      try { 
+        st.activeEl.removeEventListener("resize", st.metaHandler); 
+      } catch(e) {}
       st.metaHandler = null;
     }
-    if (st.rafId) { cancelAnimationFrame(st.rafId); st.rafId = null; }
+    if (st.rafId) { 
+      cancelAnimationFrame(st.rafId); 
+      st.rafId = null; 
+    }
 
     for (const rec of st.moved) {
       try {
         rec.node.classList.remove("vft-media");
-        if (rec.prevStyle) rec.node.setAttribute("style", rec.prevStyle);
-        else rec.node.removeAttribute("style");
-        if (rec.type === "video" && rec.prevControls !== null) rec.node.controls = rec.prevControls;
+        if (rec.prevStyle) {
+          rec.node.setAttribute("style", rec.prevStyle);
+        } else {
+          rec.node.removeAttribute("style");
+        }
+        if (rec.type === "video" && rec.prevControls !== null) {
+          rec.node.controls = rec.prevControls;
+        }
         if (rec.placeholder && rec.placeholder.parentNode) {
           rec.placeholder.parentNode.insertBefore(rec.node, rec.placeholder.nextSibling);
           rec.placeholder.remove();
@@ -271,13 +282,21 @@ function toggleFullTab(preferredMode) {
     st.activeEl = null;
 
     const overlay = d.getElementById("vft-overlay");
-    if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    if (overlay && overlay.parentNode) {
+      overlay.parentNode.removeChild(overlay);
+    }
     const style = d.getElementById("vft-style");
-    if (style) style.remove();
+    if (style) {
+      style.remove();
+    }
 
     st.active = false;
   };
 
   const st = getState();
-  if (!st.active) activate(); else deactivate();
+  if (!st.active) {
+    activate();
+  } else {
+    deactivate();
+  }
 }

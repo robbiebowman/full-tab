@@ -2,11 +2,9 @@
   "manifest_version": 2,
   "name": "Full Tab",
   "version": "1.8.0",
-  "description": "Pixel-precise full-tab video. Right-click the icon to toggle Fit (contain/cover). Remembers your choice.",
+  "description": "Toggle videos (or largest iframe) to fill the entire browser tab with pixel-perfect fit.",
   "permissions": [
     "activeTab",
-    "storage",
-    "contextMenus",
     "<all_urls>"
   ],
   "browser_action": {
