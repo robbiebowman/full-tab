@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Video Full Tab",
-  "version": "1.6.0",
-  "description": "Reparents the video/iframe into a clean overlay so it truly fills the tab (no site layout quirks).",
+  "version": "1.6.1",
+  "description": "Overlay approach with proper toggle/fit and delayed activation until a video appears.",
   "permissions": [
     "scripting",
     "activeTab"
