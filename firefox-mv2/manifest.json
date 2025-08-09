@@ -1,10 +1,12 @@
 {
   "manifest_version": 2,
   "name": "Video Full Tab",
-  "version": "1.7.0",
-  "description": "Pixel-perfect sizing (no object-fit). Computes contain/cover via JS; tracks node swaps; super stable on Twitch/YouTube.",
+  "version": "1.8.0",
+  "description": "Pixel-precise full-tab video. Right-click the icon to toggle Fit (contain/cover). Remembers your choice.",
   "permissions": [
     "activeTab",
+    "storage",
+    "contextMenus",
     "<all_urls>"
   ],
   "browser_action": {
