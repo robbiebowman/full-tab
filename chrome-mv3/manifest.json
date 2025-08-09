@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Video Full Tab",
+  "version": "1.1.0",
+  "description": "Fill the tab with the video or player container (handles iframes; better YouTube support).",
+  "permissions": [
+    "scripting",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_title": "Video Full Tab (toggle)"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "manifest_version": 2,
+  "name": "Video Full Tab",
+  "version": "1.0.1",
+  "description": "Toggle a video (or the largest iframe) to fill the tab. Handles iframes.",
+  "permissions": [
+    "activeTab",
+    "<all_urls>"
+  ],
+  "browser_action": {
+    "default_title": "Video Full Tab (toggle)"
+  },
+  "background": {
+    "scripts": [
+      "background.js"
+    ],
+    "persistent": false
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "video-full-tab@rob-bowman"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
