@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
   "name": "Video Full Tab",
-  "version": "1.6.1",
-  "description": "Overlay approach with proper toggle/fit and delayed activation until a video appears.",
+  "version": "1.7.0",
+  "description": "Pixel-perfect sizing (no object-fit). Computes contain/cover via JS; tracks node swaps; super stable on Twitch/YouTube.",
   "permissions": [
     "activeTab",
     "<all_urls>"
